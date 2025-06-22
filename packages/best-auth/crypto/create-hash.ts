@@ -1,12 +1,25 @@
-type EncodingFormat = "none" | "hex" | "base64";
+import { subtle } from "uncrypto";
+import { base64, base64Url } from "./base64";
+type EncodingFormat =
+  | "none"
+  | "hex"
+  | "base64"
+  | "base64url"
+  | "base64url-nopad";
 type SHAFamily = "SHA-1" | "SHA-256" | "SHA-384" | "SHA-512";
-type TypedArray =
-  | Uint8Array | Uint16Array | Uint32Array
-  | Int8Array  | Int16Array  | Int32Array
-  | Float32Array | Float64Array;
+export type TypedArray =
+  | Uint8Array
+  | Uint16Array
+  | Uint32Array
+  | Int8Array
+  | Int16Array
+  | Int32Array
+  | Float32Array
+  | Float64Array;
 
 function base64Encode(bytes: TypedArray): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  const chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   let result = "";
   let i: number;
 
@@ -40,7 +53,7 @@ function encode(buffer: ArrayBuffer, encoding: EncodingFormat): string {
   switch (encoding) {
     case "hex":
       return Array.from(bytes)
-        .map(b => b.toString(16).padStart(2, "0"))
+        .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
     case "base64":
       return base64Encode(bytes);
@@ -50,30 +63,42 @@ function encode(buffer: ArrayBuffer, encoding: EncodingFormat): string {
 }
 
 export function createHash<Encoding extends EncodingFormat = "none">(
-  type: SHAFamily,
+  algorithm: SHAFamily,
   encoding?: Encoding
 ) {
   return {
-    async digest(
+    digest: async (
       input: string | ArrayBuffer | TypedArray
-    ): Promise<Encoding extends "none" ? ArrayBuffer : string> {
-      let data: ArrayBuffer;
+    ): Promise<Encoding extends "none" ? ArrayBuffer : string> => {
+      const encoder = new TextEncoder();
+      const data = typeof input === "string" ? encoder.encode(input) : input;
+      const hashBuffer = await subtle.digest(algorithm, data);
 
-      if (typeof input === "string") {
-        data = new TextEncoder().encode(input);
-      } else if (ArrayBuffer.isView(input)) {
-        data = input.buffer.slice(input.byteOffset, input.byteOffset + input.byteLength);
-      } else {
-        data = input;
+      if (encoding === "hex") {
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+
+        const hashHex = hashArray
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
+
+        return hashHex as any;
       }
 
-      const hash = await crypto.subtle.digest(type, data);
-
-      if (encoding === "none" || encoding === undefined) {
-        return hash as any;
+      if (
+        encoding === "base64" ||
+        encoding === "base64url" ||
+        encoding === "base64url-nopad"
+      ) {
+        if (encoding.includes("url")) {
+          return base64Url.encode(hashBuffer, {
+            padding: encoding !== "base64url-nopad",
+          }) as any;
+        }
+        const hash_base64 = base64.encode(hashBuffer);
+        return hash_base64 as any;
       }
 
-      return encode(hash, encoding) as any;
-    }
+      return hashBuffer as any;
+    },
   };
 }
