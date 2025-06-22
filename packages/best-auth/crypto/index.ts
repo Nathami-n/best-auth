@@ -8,7 +8,7 @@ export type SymmetricEncryptionAlgOptions = {
   data: string;
 };
 
-export const encrypt_symmetrically = async ({
+export const encryptSymmetric = async ({
   key,
   data,
 }: SymmetricEncryptionAlgOptions) => {
@@ -16,4 +16,18 @@ export const encrypt_symmetrically = async ({
   const data_as_bytes = utf8ToBytes(data);
   const chacha = managedNonce(xchacha20poly1305)(new Uint8Array(key_bytes));
   return bytesToHex(chacha.encrypt(data_as_bytes));
+};
+
+export type decryptSymmetric = {
+  key: string;
+  data: string;
+};
+
+export const symmetricDecrypt = async ({ key, data }: decryptSymmetric) => {
+  const key_as_bytes = await createHash("SHA-256").digest(key);
+  const data_as_bytes = hexToBytes(data);
+
+  const chacha = managedNonce(xchacha20poly1305)(new Uint8Array(key_as_bytes));
+
+  return new TextDecoder().decode(chacha.decrypt(data_as_bytes));
 };
