@@ -34,3 +34,5 @@ export const symmetricDecrypt = async ({ key, data }: decryptSymmetric) => {
   return new TextDecoder().decode(chacha.decrypt(data_as_bytes));
 };
 
+export * from "./buffer";
+export * from "./create-hash";
