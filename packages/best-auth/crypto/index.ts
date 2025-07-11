@@ -25,9 +25,12 @@ export type decryptSymmetric = {
 
 export const symmetricDecrypt = async ({ key, data }: decryptSymmetric) => {
   const key_as_bytes = await createHash("SHA-256").digest(key);
+
   const data_as_bytes = hexToBytes(data);
 
   const chacha = managedNonce(xchacha20poly1305)(new Uint8Array(key_as_bytes));
 
+
   return new TextDecoder().decode(chacha.decrypt(data_as_bytes));
 };
+
