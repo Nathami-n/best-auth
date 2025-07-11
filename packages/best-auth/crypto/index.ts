@@ -36,3 +36,4 @@ export const symmetricDecrypt = async ({ key, data }: decryptSymmetric) => {
 
 export * from "./buffer";
 export * from "./create-hash";
+export * from "./jwt";
